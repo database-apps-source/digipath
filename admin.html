@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DigiPath Admin — CRM &amp; Operasional</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .view{display:none;} .view.active{display:block;}
+  .tab-pill{display:inline-flex; gap:.4rem; background:var(--surface-bg); border-radius:var(--radius-sm); padding:4px; margin-bottom:1rem;}
+  .tab-pill button{border:none; background:none; padding:.5rem 1rem; border-radius:calc(var(--radius-sm) - 2px); font-weight:700; font-size:13px; color:var(--text-muted);}
+  .tab-pill button.active{background:#fff; color:var(--primary); box-shadow:var(--shadow-1);}
+  .funnel-row{display:flex; justify-content:space-between; align-items:center; padding:.6rem 0;}
+  .funnel-bar-track{height:8px; background:var(--surface-bg); border-radius:var(--radius-full); margin-top:.3rem;}
+  .funnel-bar-fill{height:100%; border-radius:var(--radius-full);}
+  .chip-row{display:flex; gap:.5rem; flex-wrap:wrap; margin:.75rem 0;}
+  .chip{border:1px solid var(--border-subtle); border-radius:var(--radius-full); padding:.35rem .8rem; font-size:12.5px; font-weight:600; background:#fff; color:var(--text-muted); cursor:pointer;}
+  .chip.active{background:var(--primary); color:#fff; border-color:var(--primary);}
+  .mobile-topbar{display:none;}
+  @media (max-width:900px){
+    .mobile-topbar{display:flex; align-items:center; justify-content:space-between; padding:.75rem 1rem; background:#fff; border-bottom:1px solid var(--border-subtle); position:sticky; top:0; z-index:50;}
+  }
+</style>
+</head>
+<body data-theme="light">
+<div id="loading"><div class="spinner"></div></div>
+<div id="notif"></div>
+
+<div class="mobile-topbar">
+  <button class="btn btn-ghost btn-sm" onclick="document.getElementById('sidebar').classList.toggle('open')">☰ Menu</button>
+  <div class="brand" style="font-size:15px;"><span class="mark" style="width:26px;height:26px;">🎓</span>DigiPath Admin</div>
+</div>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="sidebar">
+    <div class="brand">DigiPath <span style="color:#c4b5fd;">Admin</span></div>
+    <div class="group-label">Navigasi CRM &amp; Operasional</div>
+    <nav>
+      <a href="#pipeline" data-view="pipeline">📊 Pipeline Leads</a>
+      <a href="#broadcast" data-view="broadcast">📣 Broadcast &amp; Antrean</a>
+      <a href="#log" data-view="log">📄 Log Aktivitas</a>
+    </nav>
+    <div class="group-label">Portal Siswa</div>
+    <nav>
+      <a href="#kursus" data-view="kursus">🗂 Kelola Kursus</a>
+      <a href="beranda.html">🎓 Lihat sebagai Member</a>
+    </nav>
+    <div style="position:absolute; bottom:1.25rem; left:1rem; right:1rem; display:flex; align-items:center; gap:.5rem;">
+      <div class="avatar" id="avatarInit" style="background:#c4b5fd22;color:#e4dfff;">A</div>
+      <div style="flex:1; min-width:0;"><div style="font-weight:700; font-size:13px; color:#fff;" id="navNama">—</div><div class="text-xs" style="color:#9b94c4;">Admin</div></div>
+      <button class="btn btn-ghost btn-sm" style="color:#cfc9ec;" onclick="keluar()">⏻</button>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <!-- ======================= VIEW: PIPELINE / DASHBOARD ======================= -->
+    <section class="view" id="view-pipeline">
+      <div class="flex justify-between items-center" style="flex-wrap:wrap; gap:1rem;">
+        <div>
+          <span class="pill pill-enrolled">● Live Pipeline • Sinkronisasi Aktif</span>
+          <h1 style="font-size:24px; margin:.5rem 0 .2rem;">Overview Ekosistem &amp; Corong Member</h1>
+          <p class="text-muted text-sm">Monitoring pergerakan lead, status retensi kelas, dan tindak lanjut otomasi.</p>
+        </div>
+        <button class="btn btn-secondary" onclick="muatDashboard(true)">↻ Segarkan</button>
+      </div>
+
+      <div class="kpi-grid mt-3" id="kpiGrid"></div>
+
+      <div class="grid-2 mt-3">
+        <div class="card">
+          <h3 style="font-size:15px; margin:0 0 1rem;">Tren Pendaftaran Member (6 Bulan)</h3>
+          <div id="trenChart" style="display:flex; align-items:flex-end; gap:.5rem; height:140px;"></div>
+        </div>
+        <div class="card">
+          <h3 style="font-size:15px; margin:0 0 .5rem;">Distribusi Funnel CRM</h3>
+          <div id="funnelChart"></div>
+        </div>
+      </div>
+
+      <div class="card mt-3">
+        <div class="flex justify-between items-center">
+          <h3 style="font-size:15px; margin:0;">Aktivitas &amp; Log Member Terkini</h3>
+          <div class="chip-row" id="logFilterChips" style="margin:0;">
+            <span class="chip active" data-f="semua">Semua</span>
+            <span class="chip" data-f="perlu_tindakan">Perlu Tindakan</span>
+          </div>
+        </div>
+        <div class="table-wrap mt-2"><table class="data-table">
+          <thead><tr><th>Member</th><th>Aktivitas</th><th>Waktu</th></tr></thead>
+          <tbody id="logTable"></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- ======================= VIEW: BROADCAST & ANTREAN ======================= -->
+    <section class="view" id="view-broadcast"></section>
+
+    <!-- ======================= VIEW: LOG AKTIVITAS (CRM KONTAK) ======================= -->
+    <section class="view" id="view-log"></section>
+
+    <!-- ======================= VIEW: KELOLA KURSUS ======================= -->
+    <section class="view" id="view-kursus"></section>
+  </main>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/admin-broadcast.js"></script>
+<script src="js/admin-crm.js"></script>
+<script src="js/admin-kursus.js"></script>
+<script>
+requireAuth(['admin']);
+document.getElementById('navNama').textContent = Sesi.me.nama;
+document.getElementById('avatarInit').textContent = Sesi.me.nama.slice(0,1).toUpperCase();
+warmUpServer('admin');
+
+// ---- Router SPA sederhana (hash-based, tanpa reload halaman) --------------
+const VIEWS = { pipeline: muatDashboard, broadcast: initBroadcast, log: initCrmLog, kursus: initKursus };
+function routeTo() {
+  const v = (location.hash || '#pipeline').replace('#', '');
+  if (!VIEWS[v]) return;
+  document.querySelectorAll('.admin-sidebar nav a').forEach(a => a.classList.toggle('active', a.dataset.view === v));
+  document.querySelectorAll('.view').forEach(s => s.classList.toggle('active', s.id === 'view-' + v));
+  document.getElementById('sidebar').classList.remove('open');
+  VIEWS[v](false);
+}
+window.addEventListener('hashchange', routeTo);
+routeTo();
+
+function badgeFunnel(tahap) {
+  if (tahap === 'Hot / Follow-up') return '<span class="pill pill-hot">Hot / Follow-up</span>';
+  if (tahap === 'Enrolled Paid') return '<span class="pill pill-enrolled">Enrolled Paid</span>';
+  return '<span class="pill pill-lead">' + esc(tahap || 'Lead Baru') + '</span>';
+}
+
+async function muatDashboard(fresh) {
+  SWR.render('admDash', renderDash);
+  const res = await api('admin.dashboard', fresh ? { _fresh: 1 } : {});
+  if (res.success) { renderDash(res.data); SWR.save('admDash', res.data); }
+}
+function renderDash(d) {
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi-card"><div class="label">Total Basis Member</div><div class="value">${d.kpi.totalMember.toLocaleString('id-ID')}</div><div class="delta">${d.kpi.aktif7Hari} aktif 7 hari terakhir</div></div>
+    <div class="kpi-card"><div class="label">Katalog Kurikulum</div><div class="value">${d.kpi.totalKelas}</div><div class="delta">${d.kpi.kelasPublish} Published</div></div>
+    <div class="kpi-card"><div class="label">Rata-rata Kelulusan</div><div class="value">${d.kpi.rataKelulusan}%</div><div class="delta">dari seluruh enrollment</div></div>
+    <div class="kpi-card"><div class="label">Antrean Pesan</div><div class="value">${d.antreanRingkas.menunggu}</div><div class="delta">${d.antreanRingkas.terkirim} terkirim hari ini</div></div>`;
+
+  const max = Math.max(1, ...d.trenPendaftaran.map(t => t.jumlah));
+  document.getElementById('trenChart').innerHTML = d.trenPendaftaran.map(t => `
+    <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;">
+      <div style="width:70%; background:var(--primary); border-radius:4px 4px 0 0; height:${Math.max(4, t.jumlah / max * 100)}%;"></div>
+      <div class="text-xs text-muted mt-1">${t.bulan.slice(5)}</div>
+    </div>`).join('');
+
+  const totalFunnel = d.funnel.reduce((s, f) => s + f.jumlah, 0) || 1;
+  const warna = { 'Lead Baru': 'var(--funnel-lead)', 'Hot / Follow-up': 'var(--funnel-hot)', 'Enrolled Paid': 'var(--tertiary-emerald)' };
+  document.getElementById('funnelChart').innerHTML = d.funnel.map(f => `
+    <div class="funnel-row" style="display:block;">
+      <div class="flex justify-between"><span class="text-sm" style="font-weight:600;">${esc(f.tahap)}</span><span class="text-sm">${f.jumlah} (${Math.round(f.jumlah/totalFunnel*100)}%)</span></div>
+      <div class="funnel-bar-track"><div class="funnel-bar-fill" style="width:${Math.round(f.jumlah/totalFunnel*100)}%; background:${warna[f.tahap] || 'var(--text-muted)'}"></div></div>
+    </div>`).join('') || '<p class="text-muted text-sm">Belum ada data CRM.</p>';
+
+  muatLog('semua');
+}
+
+document.getElementById('logFilterChips').addEventListener('click', e => {
+  const chip = e.target.closest('.chip'); if (!chip) return;
+  document.querySelectorAll('#logFilterChips .chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active'); muatLog(chip.dataset.f);
+});
+async function muatLog(filter) {
+  const res = await api('admin.log.list', { filter });
+  if (!res.success) return;
+  document.getElementById('logTable').innerHTML = res.data.rows.map(l => `
+    <tr>
+      <td><div style="font-weight:600;">${esc(l.member ? l.member.nama : '—')}</div><div class="text-xs text-muted">${esc(l.member ? l.member.noWa : '')}</div></td>
+      <td>${esc(l.aksi)} <div class="text-xs text-muted">${esc(l.detail || '')}</div></td>
+      <td class="text-sm text-muted">${fmtWaktu(l.waktu)}</td>
+    </tr>`).join('') || '<tr><td colspan="3" class="text-muted">Belum ada aktivitas.</td></tr>';
+}
+
+function keluar() { api('auth.logout'); Sesi.logout(); location.href = 'index.html'; }
+</script>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Beranda — DigiPath Academy</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .hero-card{background:linear-gradient(135deg,#fff,#f3f0ff); border:1px solid var(--border-subtle); border-radius:var(--radius-xl); padding:var(--sp-xl); display:flex; justify-content:space-between; gap:2rem; flex-wrap:wrap;}
+  .ring{width:120px;height:120px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;background:conic-gradient(var(--primary) calc(var(--pct,0)*1%), var(--primary-light) 0); position:relative;}
+  .ring::before{content:'';position:absolute; inset:10px; background:#fff; border-radius:50%;}
+  .ring span{position:relative; font-family:var(--font-head); font-weight:800; font-size:26px;}
+  .ring small{position:relative; font-size:10px; color:var(--text-muted); font-weight:700;}
+  .continue-card{display:flex; gap:1rem; padding:1rem; border:1px solid var(--border-subtle); border-radius:var(--radius-lg); background:#fff;}
+  .continue-card .thumb{width:120px; aspect-ratio:16/9; border-radius:var(--radius-md); background:linear-gradient(135deg,var(--primary),#4c1d95); flex-shrink:0;}
+  .filter-chip{border:1px solid var(--border-subtle); background:#fff; border-radius:var(--radius-full); padding:.4rem .9rem; font-size:13px; font-weight:600; color:var(--text-muted);}
+  .filter-chip.active{background:var(--primary); color:#fff; border-color:var(--primary);}
+</style>
+</head>
+<body>
+<div id="loading"><div class="spinner"></div></div>
+<div id="notif"></div>
+
+<header class="topbar"><div class="container topbar-inner">
+  <div class="brand"><span class="mark">🎓</span>DigiPath <span class="accent">Academy</span></div>
+  <div class="nav-links">
+    <a href="beranda.html" class="active">Katalog Kelas</a>
+    <a href="beranda.html#kelas-saya">Kelas Saya</a>
+    <a href="ruang-belajar.html">Ruang Belajar</a>
+    <a href="admin.html" id="navAdmin" class="hidden">CRM Admin</a>
+  </div>
+  <div class="flex items-center gap-1">
+    <div class="avatar" id="avatarInit">U</div>
+    <div class="text-sm"><div style="font-weight:700" id="navNama">—</div><div class="text-xs text-muted">Member</div></div>
+    <button class="btn btn-ghost btn-sm" onclick="keluar()">Keluar</button>
+  </div>
+</div></header>
+
+<main class="container" style="padding-top:1.75rem; padding-bottom:3rem;">
+  <section class="hero-card">
+    <div>
+      <span class="pill pill-lead">Member Portal • DigiPath Pro</span>
+      <h1 style="font-size:28px; margin:.6rem 0 .3rem;" id="sapaan">Selamat datang kembali 👋</h1>
+      <p class="text-muted">Lanjutkan pembelajaran modul e-course Anda atau eksplorasi materi praktis automasi &amp; digital sales funnel.</p>
+      <div class="flex gap-2" style="margin-top:1.25rem;">
+        <div><div style="font-family:var(--font-head); font-weight:800; font-size:26px;" id="stKelas">0</div><div class="text-xs text-muted">Kelas Aktif</div></div>
+        <div><div style="font-family:var(--font-head); font-weight:800; font-size:26px;" id="stSertif">0</div><div class="text-xs text-muted">Sertifikat Selesai</div></div>
+        <div><div style="font-family:var(--font-head); font-weight:800; font-size:26px;" id="stModul">0</div><div class="text-xs text-muted">Modul Terselesaikan</div></div>
+      </div>
+    </div>
+    <div class="flex items-center">
+      <div class="ring" style="--pct:0" id="ringProgres"><span id="ringPct">0%</span><small>SELESAI TOTAL</small></div>
+    </div>
+  </section>
+
+  <section class="mt-3" id="lanjutkanWrap">
+    <div class="flex justify-between items-center mt-2"><h2 style="font-size:18px;">● Lanjutkan Belajar</h2></div>
+    <div id="lanjutkanList" class="grid-2 mt-2"></div>
+  </section>
+
+  <section class="mt-3" id="kelas-saya">
+    <div class="flex justify-between items-center">
+      <h2 style="font-size:20px;">Katalog &amp; Kelas Terdaftar</h2>
+      <div class="flex gap-1" id="filterChips">
+        <button class="filter-chip active" data-f="semua">Semua Kelas</button>
+        <button class="filter-chip" data-f="sedang_berjalan">Sedang Berjalan</button>
+        <button class="filter-chip" data-f="selesai">Selesai</button>
+        <button class="filter-chip" data-f="belum_mulai">Belum Mulai</button>
+      </div>
+    </div>
+    <div class="course-grid mt-2" id="courseGrid"></div>
+  </section>
+</main>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script>
+requireAuth(['member','admin']);
+document.getElementById('navNama').textContent = Sesi.me.nama;
+document.getElementById('avatarInit').textContent = Sesi.me.nama.slice(0,1).toUpperCase();
+document.getElementById('sapaan').textContent = 'Selamat datang kembali, ' + Sesi.me.nama.split(' ')[0] + ' 👋';
+if (Sesi.me.peran === 'admin') document.getElementById('navAdmin').classList.remove('hidden');
+
+let allCourses = [];
+let filterAktif = 'semua';
+
+async function muat(fresh) {
+  SWR.render('beranda', render);
+  SWR.render('katalog', renderKatalog);
+  const [beranda, katalog] = await Promise.all([
+    apiQ('member.beranda', fresh ? { _fresh: 1 } : {}),
+    apiQ('courses.list', fresh ? { _fresh: 1 } : {})
+  ]);
+  if (beranda.success) { render(beranda.data); SWR.save('beranda', beranda.data); }
+  if (katalog.success) { allCourses = katalog.data; renderKatalog(allCourses); SWR.save('katalog', allCourses); }
+}
+
+function render(d) {
+  document.getElementById('stKelas').textContent = d.ringkasan.kelasAktif;
+  document.getElementById('stSertif').textContent = d.ringkasan.sertifikatSelesai;
+  document.getElementById('stModul').textContent = d.ringkasan.modulSelesai;
+  document.getElementById('ringProgres').style.setProperty('--pct', d.ringkasan.progresTotal);
+  document.getElementById('ringPct').textContent = d.ringkasan.progresTotal + '%';
+
+  const wrap = document.getElementById('lanjutkanList');
+  if (!d.lanjutkanBelajar.length) { document.getElementById('lanjutkanWrap').classList.add('hidden'); return; }
+  wrap.innerHTML = d.lanjutkanBelajar.map(c => `
+    <div class="continue-card">
+      <div class="thumb"></div>
+      <div style="flex:1; min-width:0;">
+        <span class="pill pill-lead">Sedang Berjalan</span>
+        <div style="font-weight:700; margin:.4rem 0;">${esc(c.judul)}</div>
+        <div class="progress-track"><div class="progress-fill" style="width:${c.progresPersen}%"></div></div>
+        <div class="flex justify-between items-center mt-1">
+          <span class="text-xs text-muted">${c.lessonBerikut ? 'Lanjut: ' + esc(c.lessonBerikut) : 'Siap dimulai'}</span>
+          <a class="btn btn-primary btn-sm" href="ruang-belajar.html?courseId=${c.courseId}${c.lessonId ? '&lessonId=' + c.lessonId : ''}">Lanjutkan →</a>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function renderKatalog(data) {
+  const filtered = filterAktif === 'semua' ? data : data.filter(c => c.status === filterAktif);
+  const grid = document.getElementById('courseGrid');
+  if (!filtered.length) { grid.innerHTML = '<p class="text-muted">Belum ada kelas pada filter ini.</p>'; return; }
+  grid.innerHTML = filtered.map(c => `
+    <div class="card course-card card-hover" style="padding:0;">
+      <div class="thumb">
+        <span class="badge pill ${c.status === 'selesai' ? 'pill-enrolled' : c.status === 'sedang_berjalan' ? 'pill-lead' : 'pill-muted'}">
+          ${c.status === 'selesai' ? 'SELESAI' : c.status === 'sedang_berjalan' ? 'SEDANG BERJALAN' : 'BELUM MULAI'}
+        </span>
+      </div>
+      <div class="body">
+        <div class="text-xs text-muted">${esc(c.jenisAkses)} • ${c.totalModul} Modul</div>
+        <div class="title">${esc(c.judul)}</div>
+        <p class="text-sm text-muted" style="min-height:36px;">${esc((c.deskripsi||'').slice(0,80))}</p>
+        ${c.terdaftar ? `<div class="progress-track mt-1"><div class="progress-fill ${c.status==='selesai'?'done':''}" style="width:${c.progresPersen}%"></div></div>` : ''}
+        <a class="btn ${c.terdaftar ? 'btn-primary' : 'btn-secondary'} btn-block mt-2" href="ruang-belajar.html?courseId=${c.id}">
+          ${c.terdaftar ? (c.status === 'selesai' ? 'Lihat Sertifikat' : 'Lanjut Belajar') : 'Lihat Detail'}
+        </a>
+      </div>
+    </div>`).join('');
+}
+
+document.getElementById('filterChips').addEventListener('click', e => {
+  const btn = e.target.closest('.filter-chip'); if (!btn) return;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active'); filterAktif = btn.dataset.f;
+  renderKatalog(allCourses);
+});
+
+function keluar() { api('auth.logout'); Sesi.logout(); location.href = 'index.html'; }
+muat(false);
+</script>
+</body>
+</html>

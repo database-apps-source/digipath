@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DigiPath Academy — Masuk &amp; Daftar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  body{display:flex; align-items:center; justify-content:center; min-height:100vh; background:linear-gradient(180deg,#f9f9ff,#eef0fb); padding:2rem 1rem;}
+  .auth-wrap{width:100%; max-width:460px;}
+  .auth-header{text-align:center; margin-bottom:1.5rem;}
+  .auth-header .brand{justify-content:center; margin-bottom:1rem;}
+  .auth-card{background:#fff; border-radius:var(--radius-xl); box-shadow:var(--shadow-3); overflow:hidden; border-top:4px solid var(--primary);}
+  .tabs{display:flex; background:var(--primary-light); border-radius:var(--radius-sm); padding:4px; margin:1.5rem 1.5rem 0;}
+  .tabs button{flex:1; background:none; border:none; padding:.6rem; border-radius:calc(var(--radius-sm) - 2px); font-weight:700; font-size:14px; color:var(--text-muted);}
+  .tabs button.active{background:#fff; color:var(--primary); box-shadow:var(--shadow-1);}
+  form{padding:1.5rem;}
+  .foot-note{text-align:center; font-size:12px; color:var(--text-muted); margin-top:1.5rem;}
+</style>
+</head>
+<body>
+<div id="loading"><div class="spinner"></div><div class="text-sm text-muted">Memproses...</div></div>
+<div id="notif"></div>
+
+<div class="auth-wrap">
+  <div class="auth-header">
+    <div class="brand"><span class="mark">🎓</span>DigiPath <span class="accent">Academy</span></div>
+    <span class="pill pill-enrolled">● Gateway Belajar Aktif</span>
+    <h1 style="font-size:24px; margin:.75rem 0 .25rem;">Portal Belajar &amp; CRM Otomasi</h1>
+    <p class="text-muted text-sm">Akses instan kurikulum digital, sinkronisasi Drive &amp; pipeline kelas</p>
+  </div>
+
+  <div class="auth-card">
+    <div class="tabs">
+      <button id="tabMasuk" class="active" onclick="gantiTab('masuk')">↪ Masuk</button>
+      <button id="tabDaftar" onclick="gantiTab('daftar')">＋ Daftar Baru</button>
+    </div>
+
+    <form id="formMasuk" onsubmit="return submitMasuk(event)">
+      <div class="field">
+        <label>Alamat Email</label>
+        <input class="input" type="email" id="mEmail" placeholder="nama@email.com" required>
+      </div>
+      <div class="field">
+        <label>Kata Sandi</label>
+        <input class="input" type="password" id="mPass" placeholder="••••••••" required>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit">Masuk ke Ruang Belajar →</button>
+      <p class="foot-note">Admin demo: <b>admin@digipath.id</b> / <b>admin123</b> (ganti setelah setup)</p>
+    </form>
+
+    <form id="formDaftar" class="hidden" onsubmit="return submitDaftar(event)">
+      <div class="field"><label>Nama Lengkap</label><input class="input" id="dNama" required></div>
+      <div class="field"><label>Alamat Email</label><input class="input" type="email" id="dEmail" required></div>
+      <div class="field"><label>Nomor WhatsApp Aktif</label><input class="input" id="dWa" placeholder="0812-3456-7890" required></div>
+      <div class="field"><label>Kata Sandi</label><input class="input" type="password" id="dPass" minlength="6" required></div>
+      <button class="btn btn-primary btn-block" type="submit">Daftar &amp; Masuk Ruang Belajar →</button>
+    </form>
+  </div>
+  <p class="foot-note">© 2026 DigiPath Academy. Seluruh hak cipta dilindungi.</p>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script>
+  if (Sesi.isLoggedIn) location.href = Sesi.me.peran === 'admin' ? 'admin.html' : 'beranda.html';
+  warmUpServer('pub');
+
+  function gantiTab(t) {
+    document.getElementById('tabMasuk').classList.toggle('active', t === 'masuk');
+    document.getElementById('tabDaftar').classList.toggle('active', t === 'daftar');
+    document.getElementById('formMasuk').classList.toggle('hidden', t !== 'masuk');
+    document.getElementById('formDaftar').classList.toggle('hidden', t !== 'daftar');
+  }
+
+  async function submitMasuk(e) {
+    e.preventDefault();
+    showLoading(true);
+    const res = await api('auth.login', { email: mEmail.value.trim(), password: mPass.value });
+    showLoading(false);
+    if (!res.success) return showNotif(res.message, 'error');
+    Sesi.login(res.data.token, res.data.me);
+    showNotif(res.message, 'success');
+    location.href = res.data.me.peran === 'admin' ? 'admin.html' : 'beranda.html';
+  }
+
+  async function submitDaftar(e) {
+    e.preventDefault();
+    showLoading(true);
+    const res = await api('auth.register', { nama: dNama.value.trim(), email: dEmail.value.trim(), noWa: dWa.value.trim(), password: dPass.value });
+    showLoading(false);
+    if (!res.success) return showNotif(res.message, 'error');
+    Sesi.login(res.data.token, res.data.me);
+    showNotif(res.message, 'success');
+    location.href = 'beranda.html';
+  }
+</script>
+</body>
+</html>
