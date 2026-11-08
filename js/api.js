@@ -22,7 +22,7 @@ const Sesi = {
 };
 
 // ---- Dedupe baca in-flight + epoch tulis (gas-scale-turbo §4.2) -----------
-const READ_ACTIONS = /^(member\.beranda|courses\.list|course\.detail|lesson\.get|admin\.dashboard|admin\.crm\.list|admin\.log\.list|admin\.notif\.settings\.get|admin\.notif\.queue\.list|auth\.me|batch)$/;
+const READ_ACTIONS = /^(member\.beranda|courses\.list|course\.detail|lesson\.get|admin\.dashboard|admin\.crm\.list|admin\.log\.list|admin\.lesson\.list|admin\.notif\.settings\.get|admin\.notif\.queue\.list|auth\.me|batch)$/;
 const _inflight = {};
 let _writeEpoch = 0;
 

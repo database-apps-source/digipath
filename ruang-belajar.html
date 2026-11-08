@@ -124,8 +124,9 @@ async function bukaLesson(id) {
     return;
   }
   const d = res.data;
+  const labelSumber = { youtube: 'Video YouTube', link: 'Dokumen/Link Embed', drive: 'File Google Drive' }[d.sumberKonten] || 'Materi';
   document.getElementById('lessonTitle').textContent = 'Modul: ' + d.judul;
-  document.getElementById('lessonSub').textContent = d.tipe === 'video' ? 'Tipe: Video Pembelajaran' : 'Tipe: Dokumen';
+  document.getElementById('lessonSub').textContent = labelSumber;
   document.getElementById('catatanBox').value = d.catatan || '';
   document.getElementById('btnSelesai').disabled = d.selesai;
   document.getElementById('btnSelesai').textContent = d.selesai ? '✓ Modul Sudah Selesai' : '✓ Tandai Selesai & Lanjut';
