@@ -71,9 +71,15 @@ async function initKursus() {
               <p class="text-xs text-muted mt-1">Gunakan link versi "preview" / "embed" agar tampil langsung tanpa diunduh (Google Docs: ganti akhiran <code>/edit</code> dengan <code>/preview</code>).</p>
             </div>
             <div class="field hidden" id="wrapDrive">
-              <label>Drive File ID</label>
-              <input class="input" id="lsnAssetId" placeholder="Tempel File ID dari link Google Drive">
-              <p class="text-xs text-muted mt-1">Didapat dari URL file di Drive: <code>drive.google.com/file/d/<b>FILE_ID_DI_SINI</b>/view</code></p>
+              <label>Upload File ke Drive</label>
+              <div class="flex gap-1 items-center">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('fileUploadInput').click()">⬆ Pilih &amp; Unggah File</button>
+                <input type="file" id="fileUploadInput" class="hidden" onchange="mulaiUploadFile(event)">
+                <span class="text-sm text-muted" id="uploadStatusText"></span>
+              </div>
+              <div class="progress-track mt-1 hidden" id="uploadProgressWrap"><div class="progress-fill" id="uploadProgressBar" style="width:0%"></div></div>
+              <input class="input mt-2" id="lsnAssetId" placeholder="Drive File ID akan terisi otomatis setelah unggah selesai...">
+              <p class="text-xs text-muted mt-1">Atau tempel manual File ID dari link Drive yang sudah ada: <code>drive.google.com/file/d/<b>FILE_ID_DI_SINI</b>/view</code>. Maks 2GB — unggahan langsung ke Drive, tidak melalui batas ukuran server.</p>
             </div>
 
             <div class="field"><label>Tipe Tampilan</label>
@@ -189,6 +195,8 @@ function resetFormModul() {
   document.getElementById('lsnUrlYoutube').value = '';
   document.getElementById('lsnUrlLink').value = '';
   document.getElementById('lsnAssetId').value = '';
+  document.getElementById('uploadStatusText').textContent = '';
+  document.getElementById('uploadProgressWrap').classList.add('hidden');
   gantiSumberKonten('youtube');
 }
 
@@ -217,6 +225,61 @@ async function hapusModul(id) {
   const res = await api('admin.lesson.delete', { id });
   showNotif(res.message, res.success ? 'success' : 'error');
   if (res.success) { muatModulList(); muatCourses(); }
+}
+
+// ------------------- UPLOAD LANGSUNG BROWSER → DRIVE (resumable, per-chunk) -------------------
+// Token Google TIDAK PERNAH ada di browser — hanya potongan byte file yang dikirim
+// ke endpoint GAS kita sendiri; GAS yang meneruskan ke Drive dengan token server-side.
+function bufferToBase64_(buffer) {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const ukuranPotong = 0x8000;
+  for (let i = 0; i < bytes.length; i += ukuranPotong) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + ukuranPotong));
+  }
+  return btoa(binary);
+}
+
+async function mulaiUploadFile(e) {
+  const file = e.target.files[0]; if (!file) return;
+  if (!modulKelasAktif) { showNotif('Pilih kelas terlebih dahulu di atas.', 'error'); e.target.value = ''; return; }
+  const statusEl = document.getElementById('uploadStatusText');
+  const wrapBar = document.getElementById('uploadProgressWrap'), bar = document.getElementById('uploadProgressBar');
+  wrapBar.classList.remove('hidden'); bar.style.width = '0%';
+  statusEl.textContent = 'Memulai sesi upload...';
+
+  try {
+    const initRes = await api('admin.asset.upload.init', {
+      namaFile: file.name, mimeType: file.type || 'application/octet-stream', ukuranBytes: file.size, courseId: modulKelasAktif
+    });
+    if (!initRes.success) throw new Error(initRes.message);
+    const { uploadId, ukuranChunk } = initRes.data;
+
+    let offset = 0;
+    while (offset < file.size) {
+      const akhir = Math.min(offset + ukuranChunk, file.size);
+      const buffer = await file.slice(offset, akhir).arrayBuffer();
+      const chunkBase64 = bufferToBase64_(buffer);
+      const res = await api('admin.asset.upload.chunk', { uploadId, chunkBase64 });
+      if (!res.success) throw new Error(res.message);
+      if (res.data.selesai) {
+        bar.style.width = '100%';
+        statusEl.textContent = '✓ Selesai: ' + file.name;
+        document.getElementById('lsnAssetId').value = res.data.driveFileId;
+        showNotif(res.message, 'success');
+        e.target.value = '';
+        return;
+      }
+      offset = res.data.offset;
+      bar.style.width = res.data.persen + '%';
+      statusEl.textContent = 'Mengunggah... ' + res.data.persen + '%';
+    }
+  } catch (err) {
+    statusEl.textContent = '';
+    wrapBar.classList.add('hidden');
+    showNotif('Gagal unggah: ' + err.message, 'error');
+    e.target.value = '';
+  }
 }
 
 async function daftarkanMember() {

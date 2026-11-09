@@ -62,7 +62,10 @@
           <h1 style="font-size:24px; margin:.5rem 0 .2rem;">Overview Ekosistem &amp; Corong Member</h1>
           <p class="text-muted text-sm">Monitoring pergerakan lead, status retensi kelas, dan tindak lanjut otomasi.</p>
         </div>
-        <button class="btn btn-secondary" onclick="muatDashboard(true)">↻ Segarkan</button>
+        <div class="flex gap-1">
+          <button class="btn btn-secondary" onclick="muatDashboard(true)">↻ Segarkan</button>
+          <button class="btn btn-secondary" onclick="sinkronPenuh()" title="Bersihkan cache & tarik ulang semua data langsung dari Spreadsheet">🔄 Sinkron Penuh</button>
+        </div>
       </div>
 
       <div class="kpi-grid mt-3" id="kpiGrid"></div>
@@ -178,6 +181,14 @@ async function muatLog(filter) {
       <td>${esc(l.aksi)} <div class="text-xs text-muted">${esc(l.detail || '')}</div></td>
       <td class="text-sm text-muted">${fmtWaktu(l.waktu)}</td>
     </tr>`).join('') || '<tr><td colspan="3" class="text-muted">Belum ada aktivitas.</td></tr>';
+}
+
+async function sinkronPenuh() {
+  showLoading(true);
+  await api('admin.cache.clear');
+  showLoading(false);
+  showNotif('Disinkronkan — data terbaru ditarik dari Spreadsheet.', 'success');
+  routeTo(); // muat ulang view aktif dengan _fresh
 }
 
 function keluar() { api('auth.logout'); Sesi.logout(); location.href = 'index.html'; }
